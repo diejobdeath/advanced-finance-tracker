@@ -11,6 +11,46 @@ const escapeHTML = (str) => {
     .replace(/'/g, "&#039;");
 };
 
+/**
+ * 表单验证函数 (A11y 增强版)
+ */
+const validateForm = () => {
+  clearErrors(); // 清除之前的错误状态
+  let isValid = true;
+  let firstErrorInput = null; // 记录第一个出错的 DOM 节点
+
+  const title = dom.titleInput.value.trim();
+  const amount = parseFloat(dom.amountInput.value);
+
+  // 验证 Title
+  if (!title) {
+    setError(dom.titleInput, dom.titleError, i18nData.titleRequired || "Title is required.");
+    dom.titleInput.setAttribute("aria-invalid", "true"); // 标记输入无效
+    if (!firstErrorInput) firstErrorInput = dom.titleInput;
+    isValid = false;
+  } else {
+    dom.titleInput.removeAttribute("aria-invalid");
+  }
+
+  // 验证 Amount
+  if (isNaN(amount) || amount <= 0) {
+    setError(dom.amountInput, dom.amountError, i18nData.amountPositive || "Amount must be greater than 0.");
+    dom.amountInput.setAttribute("aria-invalid", "true"); // 标记输入无效
+    if (!firstErrorInput) firstErrorInput = dom.amountInput;
+    isValid = false;
+  } else {
+    dom.amountInput.removeAttribute("aria-invalid");
+  }
+
+  // A11y 核心：如果验证失败，自动将焦点锁定到第一个出错的输入框
+  if (!isValid && firstErrorInput) {
+    firstErrorInput.focus();
+  }
+
+  return isValid;
+};
+
+
 let i18nData = {};
 let currentLang = localStorage.getItem('siteLang') || 'zh';
 
