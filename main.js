@@ -266,55 +266,8 @@ const handleModalTab = (e) => {
   }
 };
 
-const renderSummary = () => {
-  const toCents = (num) => Math.round(num * 100);
-  const totalIncomeCents = state.transactions
-    .filter((tx) => tx.amount > 0)
-    .reduce((sum, tx) => sum + toCents(tx.amount), 0);
+// modify with locl
 
-  const totalExpensesCents = state.transactions
-    .filter((tx) => tx.amount < 0)
-    .reduce((sum, tx) => sum + Math.abs(toCents(tx.amount)), 0);
-
-  const balanceCents = totalIncomeCents - totalExpensesCents;
-
-  dom.totalIncome.textContent = formatCurrency(totalIncomeCents / 100);
-  dom.totalExpenses.textContent = formatCurrency(totalExpensesCents / 100);
-  dom.totalBalance.textContent = formatCurrency(balanceCents / 100);
-};
-
-
-// const renderTransactions = () => {
-//   const filtered = filterTransactions();
-
-//   dom.resultsCount.textContent = `${filtered.length} results`;
-
-//   if (filtered.length === 0) {
-//     dom.transactionsList.innerHTML = `
-//       <div class="transactions__empty">
-//         <div class="empty__icon">+</div>
-//         <p i18n="noTransactions">No transactions yet. Add your first one to get started.</p>
-//         <button class="btn btn--accent empty-add-btn" type="button" i18n="addFirstTransaction">Add First Transaction</button>
-//       </div>
-//     `;
-//     return;
-//   }
-
-//   const groups = groupByMonth(filtered);
-
-//   dom.transactionsList.innerHTML = groups
-//     .map(
-//       (group) => `
-//         <div class="month-group">
-//           <p class="month-title">${group.label}</p>
-//           ${group.items.map(renderTransactionItem).join("")}
-//         </div>
-//       `,
-//     )
-//     .join("");
-// };
-
-// modify with i18n
 const renderTransactions = () => {
   const filtered = filterTransactions();
   dom.resultsCount.textContent = currentLang === 'zh' 
