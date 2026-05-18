@@ -1,19 +1,23 @@
 "use strict";
 
+// XSS escape function
 const escapeHTML = (str) => {
-  if (!str) return "";
+  if (str === null || str === undefined || typeof str !== 'string') return "";
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/'/g, "&#039;")
+    .replace(/`/g, "&#96;")
+    .replace(/\//g, "&#x2F;");
 };
 
+const safeText = (text) => document.createTextNode(text);
 
+// modify i18n
 let i18nData = {};
 let currentLang = localStorage.getItem('siteLang') || 'zh';
-
 let previouslyFocusedElement = null;
 
 const STORAGE_KEY = "financeTrackerData";
@@ -85,7 +89,6 @@ const setTheme = (theme) => {
   dom.themeToggleBtn.textContent =
     theme === "light" ? (i18nData.darkMode || "Dark Mode") : (i18nData.lightMode || "Light Mode");
   saveTheme();
-  // new add
   renderApp(); 
 };
 
@@ -97,7 +100,8 @@ const loadTheme = () => {
 const showToast = (message, variant = "success") => {
   const toast = document.createElement("div");
   toast.className = `toast${variant === "error" ? " toast--error" : ""}`;
-  toast.textContent = message;
+  // Forbid html render
+  toast.appendChild(safeText(message));
   dom.toastContainer.appendChild(toast);
   setTimeout(() => toast.remove(), 2400);
 };
@@ -118,6 +122,7 @@ const clearErrors = () => {
 
 const setError = (input, errorEl, message) => {
   input.classList.add("is-invalid");
+  // safe text
   errorEl.textContent = message;
 };
 
@@ -169,10 +174,11 @@ const addTransaction = () => {
     return;
   }
 
-  const title = dom.titleInput.value.trim();
+  // escape before entering the inventory
+  const title = escapeHTML(dom.titleInput.value.trim());
   const amount = Number(dom.amountInput.value);
-  const category = dom.categoryInput.value;
-  const date = dom.dateInput.value;
+  const category = escapeHTML(dom.categoryInput.value);
+  const date = escapeHTML(dom.dateInput.value);
 
   if (state.editingId) {
     state.transactions = state.transactions.map((tx) =>
@@ -213,13 +219,6 @@ const startEditing = (id) => {
   showToast(i18nData.editingMode || "Editing mode enabled.");
 };
 
-// const deleteTransaction = (id) => {
-//   state.transactions = state.transactions.filter((tx) => tx.id !== id);
-//   saveToLocalStorage();
-//   renderApp();
-//   showToast("Transaction deleted.");
-// };
-
 // new vesion
 const deleteTransaction = (id) => {
   state.transactions = state.transactions.filter((tx) => tx.id !== id);
@@ -233,23 +232,10 @@ const deleteTransaction = (id) => {
   }
 };
 
-// const openConfirmModal = (id) => {
-//   state.pendingDeleteId = id;
-//   dom.confirmModal.classList.add("is-open");
-//   dom.confirmModal.setAttribute("aria-hidden", "false");
-// };
 
-// const closeConfirmModal = () => {
-//   state.pendingDeleteId = null;
-//   dom.confirmModal.classList.remove("is-open");
-//   dom.confirmModal.setAttribute("aria-hidden", "true");
-// };
-
-// new version
 const openConfirmModal = (id) => {
   state.pendingDeleteId = id;
   previouslyFocusedElement = document.activeElement;
-
   dom.confirmModal.classList.add("is-open");
   dom.confirmModal.setAttribute("aria-hidden", "false");
   setTimeout(() => {
@@ -268,14 +254,11 @@ const closeConfirmModal = () => {
   }
 };
 
-// Focus Trap
 const handleModalTab = (e) => {
   if (e.key !== "Tab") return;
-
   const focusableElements = [dom.cancelDeleteBtn, dom.confirmDeleteBtn];
   const firstElement = focusableElements[0];
   const lastElement = focusableElements[focusableElements.length - 1];
-
   if (e.shiftKey) {
     if (document.activeElement === firstElement) {
       lastElement.focus();
@@ -290,31 +273,8 @@ const handleModalTab = (e) => {
   }
 };
 
-// prev version
-// const renderSummary = () => {
-//   const amounts = state.transactions.map((tx) => tx.amount);
-
-//   const totalIncome = amounts
-//     .filter((amount) => amount > 0)
-//     .reduce((sum, amount) => sum + amount, 0);
-
-//   const totalExpenses = amounts
-//     .filter((amount) => amount < 0)
-//     .reduce((sum, amount) => sum + amount, 0);
-
-//   const totalBalance = totalIncome + totalExpenses;
-
-//   dom.totalIncome.textContent = formatCurrency(totalIncome);
-//   dom.totalExpenses.textContent = formatCurrency(Math.abs(totalExpenses));
-//   dom.totalBalance.textContent = formatCurrency(totalBalance);
-// };
-
-
-// revise version
 const renderSummary = () => {
-  // Convert monetary amounts into integers denominated in "cents" for calculation to avoid IEEE 754 floating-point precision issues.
   const toCents = (num) => Math.round(num * 100);
-  
   const totalIncomeCents = state.transactions
     .filter((tx) => tx.amount > 0)
     .reduce((sum, tx) => sum + toCents(tx.amount), 0);
@@ -330,123 +290,112 @@ const renderSummary = () => {
   dom.totalBalance.textContent = formatCurrency(balanceCents / 100);
 };
 
-// const renderTransactions = () => {
-//   const filtered = filterTransactions();
-
-//   dom.resultsCount.textContent = `${filtered.length} results`;
-
-//   if (filtered.length === 0) {
-//     dom.transactionsList.innerHTML = `
-//       <div class="transactions__empty">
-//         <div class="empty__icon">+</div>
-//         <p i18n="noTransactions">No transactions yet. Add your first one to get started.</p>
-//         <button class="btn btn--accent empty-add-btn" type="button" i18n="addFirstTransaction">Add First Transaction</button>
-//       </div>
-//     `;
-//     return;
-//   }
-
-//   const groups = groupByMonth(filtered);
-
-//   dom.transactionsList.innerHTML = groups
-//     .map(
-//       (group) => `
-//         <div class="month-group">
-//           <p class="month-title">${group.label}</p>
-//           ${group.items.map(renderTransactionItem).join("")}
-//         </div>
-//       `,
-//     )
-//     .join("");
-// };
-
+// Forbid innerHTML concat
 const renderTransactions = () => {
   const filtered = filterTransactions();
   dom.resultsCount.textContent = currentLang === 'zh' 
-  ? `共 ${filtered.length} 条结果` 
-  : `${filtered.length} results`;
+    ? `共 ${filtered.length} 条结果` 
+    : `${filtered.length} results`;
+
+  // clear the container
+  dom.transactionsList.innerHTML = '';
 
   if (filtered.length === 0) {
-    dom.transactionsList.innerHTML = `
-      <div class="transactions__empty">
-        <div class="empty__icon">+</div>
-        <p i18n="noTransactions">${i18nData.noTransactions || "No transactions yet. Add your first one to get started."}</p>
-        <button class="btn btn--accent empty-add-btn" type="button" i18n="addFirstTransaction">
-          ${i18nData.addFirstTransaction || "Add First Transaction"}
-        </button>
-      </div>
-    `;
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'transactions__empty';
+
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'empty__icon';
+    iconDiv.appendChild(safeText('+'));
+
+    const p = document.createElement('p');
+    p.setAttribute('i18n', 'noTransactions');
+    p.appendChild(safeText(i18nData.noTransactions || "No transactions yet. Add your first one to get started."));
+
+    const btn = document.createElement('button');
+    btn.className = 'btn btn--accent empty-add-btn';
+    btn.type = 'button';
+    btn.setAttribute('i18n', 'addFirstTransaction');
+    btn.appendChild(safeText(i18nData.addFirstTransaction || "Add First Transaction"));
+
+    emptyDiv.append(iconDiv, p, btn);
+    dom.transactionsList.appendChild(emptyDiv);
     return;
   }
 
   const groups = groupByMonth(filtered);
 
-  dom.transactionsList.innerHTML = groups
-    .map(
-      (group) => `
-        <div class="month-group">
-          <p class="month-title">${group.label}</p>
-          ${group.items.map(renderTransactionItem).join("")}
-        </div>
-      `,
-    )
-    .join("");
+  groups.forEach(group => {
+    const monthGroup = document.createElement('div');
+    monthGroup.className = 'month-group';
+
+    const monthTitle = document.createElement('p');
+    monthTitle.className = 'month-title';
+    monthTitle.appendChild(safeText(group.label));
+    monthGroup.appendChild(monthTitle);
+
+    group.items.forEach(tx => {
+      const item = createTransactionElement(tx);
+      monthGroup.appendChild(item);
+    });
+
+    dom.transactionsList.appendChild(monthGroup);
+  });
 };
 
+// safely creating the transaction items (No innerHTML，pure DOM)
+const createTransactionElement = (tx) => {
+  const transaction = document.createElement('div');
+  transaction.className = 'transaction';
 
-// const renderTransactionItem = (tx) => {
-//   const typeClass = tx.amount >= 0 ? "amount--income" : "amount--expense";
-//   const formattedAmount = formatCurrency(tx.amount);
-//   const formattedDate = formatDate(tx.date);
+  // Left side content
+  const leftCol = document.createElement('div');
+  const title = document.createElement('p');
+  title.className = 'transaction__title';
+  // Force escape the caption
+  title.appendChild(safeText(escapeHTML(tx.title)));
 
-//   return `
-//     <div class="transaction">
-//       <div>
-//         <p class="transaction__title">${tx.title}</p>
-//         <div class="transaction__meta">
-//           <span class="badge">${tx.category}</span>
-//           <span>${formattedDate}</span>
-//         </div>
-//       </div>
-//       <div>
-//         <p class="amount ${typeClass}">${formattedAmount}</p>
-//         <button class="edit-btn" data-id="${tx.id}">Edit</button>
-//         <button class="delete-btn" data-id="${tx.id}">Delete</button>
-//       </div>
-//     </div>
-//   `;
-// };
+  const meta = document.createElement('div');
+  meta.className = 'transaction__meta';
 
-const renderTransactionItem = (tx) => {
-  const typeClass = tx.amount >= 0 ? "amount--income" : "amount--expense";
-  const formattedAmount = formatCurrency(tx.amount);
-  
+  const badge = document.createElement('span');
+  badge.className = 'badge';
+  const categoryText = i18nData[tx.category.toLowerCase()] || tx.category;
+  badge.appendChild(safeText(escapeHTML(categoryText)));
+
+  const dateSpan = document.createElement('span');
   const locale = currentLang === 'en' ? 'en-US' : 'zh-CN';
   const formattedDate = new Date(tx.date).toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
+  dateSpan.appendChild(safeText(formattedDate));
 
-  const translatedCategory = i18nData[tx.category.toLowerCase()] || tx.category;
-  const safeTitle = escapeHTML(tx.title);
+  meta.append(badge, dateSpan);
+  leftCol.append(title, meta);
 
-  return `
-    <div class="transaction">
-      <div>
-        <p class="transaction__title">${safeTitle}</p> 
-        <div class="transaction__meta">
-          <span class="badge">${translatedCategory}</span>
-          <span>${formattedDate}</span>
-        </div>
-      </div>
-      <div>
-        <p class="amount ${typeClass}">${formattedAmount}</p>
-        <button class="edit-btn" data-id="${tx.id}">${i18nData.edit || "Edit"}</button>
-        <button class="delete-btn" data-id="${tx.id}">${i18nData.delete || "Delete"}</button>
-      </div>
-    </div>
-  `;
+  // right side content
+  const rightCol = document.createElement('div');
+  const amountP = document.createElement('p');
+  const typeClass = tx.amount >= 0 ? 'amount--income' : 'amount--expense';
+  amountP.className = `amount ${typeClass}`;
+  amountP.appendChild(safeText(formatCurrency(tx.amount)));
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'edit-btn';
+  editBtn.dataset.id = tx.id;
+  editBtn.appendChild(safeText(i18nData.edit || 'Edit'));
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.dataset.id = tx.id;
+  deleteBtn.appendChild(safeText(i18nData.delete || 'Delete'));
+
+  rightCol.append(amountP, editBtn, deleteBtn);
+  transaction.append(leftCol, rightCol);
+
+  return transaction;
 };
 
 const filterTransactions = () => {
@@ -558,7 +507,6 @@ const renderChart = () => {
     expenseHeight,
   );
 
-  // ctx.fillStyle = "#f8f4e9";  new_version 
   ctx.fillStyle = state.theme === "light" ? "#1e293b" : "#f8f4e9";
   ctx.font = "14px sans-serif";
   ctx.fillText(i18nData.incomeType || "Income", 170, baseY + 20);
@@ -612,19 +560,6 @@ const exportToCSV = () => {
   showToast(i18nData.csvExported || "CSV exported.");
 };
 
-// async function loadLanguage(lang) {
-//   try {
-//     const res = await fetch(`locales/${lang}.json`);
-//     i18nData = await res.json();
-//     currentLang = lang;
-//     localStorage.setItem('siteLang', lang);
-//     applyI18n();
-//   } catch (err) {
-//     console.error('语言文件加载失败', err);
-//   }
-// }
-
-// new version
 async function loadLanguage(lang) {
   try {
     const res = await fetch(`locales/${lang}.json`);
@@ -638,7 +573,7 @@ async function loadLanguage(lang) {
     resetFormState();
     renderApp();
   } catch (err) {
-    console.error('语言文件加载失败', err);
+    console.error('Language file failed to load', err);
   }
 }
 
@@ -646,7 +581,7 @@ function applyI18n() {
   document.querySelectorAll('[i18n]').forEach(el => {
     const key = el.getAttribute('i18n');
     if (i18nData[key]) {
-      el.innerText = i18nData[key];
+      el.textContent = i18nData[key];
     }
   });
 
@@ -712,15 +647,6 @@ const initializeApp = () => {
     renderTransactions();
   });
 
-  // dom.resetFiltersBtn.addEventListener("click", () => {
-  //   state.filters = { category: "all", type: "all", search: "" };
-  //   dom.filterCategory.value = "all";
-  //   dom.filterType.value = "all";
-  //   dom.searchInput.value = "";
-  //   renderTransactions();
-  // });
-
-  // new version
   dom.resetFiltersBtn.addEventListener("click", () => {
     state.filters = { category: "all", type: "all", search: "" };
     dom.filterCategory.value = "all";
@@ -731,7 +657,6 @@ const initializeApp = () => {
       showToast(i18nData.filtersCleared || "Filters cleared.");
     }
   });
-  // ......
 
   dom.exportCsvBtn.addEventListener("click", exportToCSV);
 
@@ -811,7 +736,7 @@ if (typeof module !== 'undefined' && module.exports) {
     closeConfirmModal,
     renderSummary,
     renderTransactions,
-    renderTransactionItem,
+    createTransactionElement,
     filterTransactions,
     groupByMonth,
     formatDate,
