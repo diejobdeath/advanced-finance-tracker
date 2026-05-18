@@ -271,11 +271,9 @@ const renderSummary = () => {
   const totalIncomeCents = state.transactions
     .filter((tx) => tx.amount > 0)
     .reduce((sum, tx) => sum + toCents(tx.amount), 0);
-
   const totalExpensesCents = state.transactions
     .filter((tx) => tx.amount < 0)
     .reduce((sum, tx) => sum + Math.abs(toCents(tx.amount)), 0);
-
   const balanceCents = totalIncomeCents - totalExpensesCents;
 
   dom.totalIncome.textContent = formatCurrency(totalIncomeCents / 100);
@@ -284,37 +282,6 @@ const renderSummary = () => {
 };
 
 
-// const renderTransactions = () => {
-//   const filtered = filterTransactions();
-
-//   dom.resultsCount.textContent = `${filtered.length} results`;
-
-//   if (filtered.length === 0) {
-//     dom.transactionsList.innerHTML = `
-//       <div class="transactions__empty">
-//         <div class="empty__icon">+</div>
-//         <p i18n="noTransactions">No transactions yet. Add your first one to get started.</p>
-//         <button class="btn btn--accent empty-add-btn" type="button" i18n="addFirstTransaction">Add First Transaction</button>
-//       </div>
-//     `;
-//     return;
-//   }
-
-//   const groups = groupByMonth(filtered);
-
-//   dom.transactionsList.innerHTML = groups
-//     .map(
-//       (group) => `
-//         <div class="month-group">
-//           <p class="month-title">${group.label}</p>
-//           ${group.items.map(renderTransactionItem).join("")}
-//         </div>
-//       `,
-//     )
-//     .join("");
-// };
-
-// modify with i18n
 const renderTransactions = () => {
   const filtered = filterTransactions();
   dom.resultsCount.textContent = currentLang === 'zh' 
@@ -566,19 +533,6 @@ const exportToCSV = () => {
   showToast(i18nData.csvExported || "CSV exported.");
 };
 
-// async function loadLanguage(lang) {
-//   try {
-//     const res = await fetch(`locales/${lang}.json`);
-//     i18nData = await res.json();
-//     currentLang = lang;
-//     localStorage.setItem('siteLang', lang);
-//     applyI18n();
-//   } catch (err) {
-//     console.error('语言文件加载失败', err);
-//   }
-// }
-
-// new version
 async function loadLanguage(lang) {
   try {
     const res = await fetch(`locales/${lang}.json`);
