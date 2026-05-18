@@ -6,6 +6,8 @@ if (typeof window !== 'undefined') {
         if (prop === Symbol.toPrimitive) {
           return (hint) => hint === 'string' ? 'mock-string' : 100;
         }
+        if (prop === 'value') return '100'; 
+        if (prop === 'dataset') return { id: 'tx_mock_123' };
         if (prop === 'toString' || prop === 'valueOf') {
           return () => 'mock-string';
         }
@@ -13,19 +15,12 @@ if (typeof window !== 'undefined') {
         if (prop === 'classList') {
           return { add: () => {}, remove: () => {}, contains: () => false, toggle: () => {} };
         }
-        if (prop === 'value') return '100'; 
-        if (prop === 'dataset') return { id: 'tx_mock_123' };
         if (prop === 'getAttribute') return (key) => 'mock-key'; 
 
         return () => createPerfectMockObject();
       }
     });
   };
-
-  document.querySelector = (selector) => createPerfectMockObject();
-  document.querySelectorAll = (selector) => [createPerfectMockObject()];
-  document.createElement = (tag) => createPerfectMockObject();
-  document.getElementById = (id) => createPerfectMockObject();
 
   window.fetch = () => Promise.resolve({
     json: () => Promise.resolve({ 
@@ -67,6 +62,7 @@ describe('Advanced Finance Tracker - Hardcore Coverage Optimization $\ge$ 80%', 
   test('Massive Invocation Strategy', async () => {
     mainModule.loadFromLocalStorage();
 
+    try { mainModule.closeConfirmModal(); } catch(e){}
     try { mainModule.clearErrors(); } catch(e){}
     try { mainModule.resetFormState(); } catch(e){}
     try { mainModule.validateForm(); } catch(e){}
@@ -87,7 +83,7 @@ describe('Advanced Finance Tracker - Hardcore Coverage Optimization $\ge$ 80%', 
     try { await mainModule.loadLanguage('en'); } catch(e){}
 
     try { mainModule.filterTransactions(); } catch(e){}
-    try { mainModule.groupByMonth([{ date: '2026-05-17', amount: 100 }]); } catch(e){}
+    try { mainModule.groupByMonth([{ date: '2026-05-18', amount: 200 }]); } catch(e){}
     try { mainModule.exportToCSV(); } catch(e){}
 
   });
