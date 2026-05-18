@@ -11,9 +11,10 @@ const escapeHTML = (str) => {
     .replace(/'/g, "&#039;");
 };
 
-// modify i18n
 let i18nData = {};
 let currentLang = localStorage.getItem('siteLang') || 'zh';
+
+// Added: Records the element that was focused prior to opening a modal, to restore focus upon closing.
 let previouslyFocusedElement = null;
 
 const STORAGE_KEY = "financeTrackerData";
@@ -85,6 +86,7 @@ const setTheme = (theme) => {
   dom.themeToggleBtn.textContent =
     theme === "light" ? (i18nData.darkMode || "Dark Mode") : (i18nData.lightMode || "Light Mode");
   saveTheme();
+  // new add
   renderApp(); 
 };
 
@@ -212,6 +214,13 @@ const startEditing = (id) => {
   showToast(i18nData.editingMode || "Editing mode enabled.");
 };
 
+// const deleteTransaction = (id) => {
+//   state.transactions = state.transactions.filter((tx) => tx.id !== id);
+//   saveToLocalStorage();
+//   renderApp();
+//   showToast("Transaction deleted.");
+// };
+
 // new vesion
 const deleteTransaction = (id) => {
   state.transactions = state.transactions.filter((tx) => tx.id !== id);
@@ -225,10 +234,23 @@ const deleteTransaction = (id) => {
   }
 };
 
+// const openConfirmModal = (id) => {
+//   state.pendingDeleteId = id;
+//   dom.confirmModal.classList.add("is-open");
+//   dom.confirmModal.setAttribute("aria-hidden", "false");
+// };
 
+// const closeConfirmModal = () => {
+//   state.pendingDeleteId = null;
+//   dom.confirmModal.classList.remove("is-open");
+//   dom.confirmModal.setAttribute("aria-hidden", "true");
+// };
+
+// new version
 const openConfirmModal = (id) => {
   state.pendingDeleteId = id;
   previouslyFocusedElement = document.activeElement;
+
   dom.confirmModal.classList.add("is-open");
   dom.confirmModal.setAttribute("aria-hidden", "false");
   setTimeout(() => {
@@ -247,11 +269,14 @@ const closeConfirmModal = () => {
   }
 };
 
+// Focus Trap
 const handleModalTab = (e) => {
   if (e.key !== "Tab") return;
+
   const focusableElements = [dom.cancelDeleteBtn, dom.confirmDeleteBtn];
   const firstElement = focusableElements[0];
   const lastElement = focusableElements[focusableElements.length - 1];
+
   if (e.shiftKey) {
     if (document.activeElement === firstElement) {
       lastElement.focus();
@@ -266,14 +291,39 @@ const handleModalTab = (e) => {
   }
 };
 
+// prev version
+// const renderSummary = () => {
+//   const amounts = state.transactions.map((tx) => tx.amount);
+
+//   const totalIncome = amounts
+//     .filter((amount) => amount > 0)
+//     .reduce((sum, amount) => sum + amount, 0);
+
+//   const totalExpenses = amounts
+//     .filter((amount) => amount < 0)
+//     .reduce((sum, amount) => sum + amount, 0);
+
+//   const totalBalance = totalIncome + totalExpenses;
+
+//   dom.totalIncome.textContent = formatCurrency(totalIncome);
+//   dom.totalExpenses.textContent = formatCurrency(Math.abs(totalExpenses));
+//   dom.totalBalance.textContent = formatCurrency(totalBalance);
+// };
+
+
+// revise version
 const renderSummary = () => {
+  // Convert monetary amounts into integers denominated in "cents" for calculation to avoid IEEE 754 floating-point precision issues.
   const toCents = (num) => Math.round(num * 100);
+  
   const totalIncomeCents = state.transactions
     .filter((tx) => tx.amount > 0)
     .reduce((sum, tx) => sum + toCents(tx.amount), 0);
+
   const totalExpensesCents = state.transactions
     .filter((tx) => tx.amount < 0)
     .reduce((sum, tx) => sum + Math.abs(toCents(tx.amount)), 0);
+
   const balanceCents = totalIncomeCents - totalExpensesCents;
 
   dom.totalIncome.textContent = formatCurrency(totalIncomeCents / 100);
@@ -281,21 +331,17 @@ const renderSummary = () => {
   dom.totalBalance.textContent = formatCurrency(balanceCents / 100);
 };
 
-
 const renderTransactions = () => {
   const filtered = filterTransactions();
-  dom.resultsCount.textContent = currentLang === 'zh' 
-  ? `共 ${filtered.length} 条结果` 
-  : `${filtered.length} results`;
+
+  dom.resultsCount.textContent = `${filtered.length} results`;
 
   if (filtered.length === 0) {
     dom.transactionsList.innerHTML = `
       <div class="transactions__empty">
         <div class="empty__icon">+</div>
-        <p i18n="noTransactions">${i18nData.noTransactions || "No transactions yet. Add your first one to get started."}</p>
-        <button class="btn btn--accent empty-add-btn" type="button" i18n="addFirstTransaction">
-          ${i18nData.addFirstTransaction || "Add First Transaction"}
-        </button>
+        <p i18n="noTransactions">No transactions yet. Add your first one to get started.</p>
+        <button class="btn btn--accent empty-add-btn" type="button" i18n="addFirstTransaction">Add First Transaction</button>
       </div>
     `;
     return;
@@ -314,7 +360,6 @@ const renderTransactions = () => {
     )
     .join("");
 };
-
 
 // const renderTransactionItem = (tx) => {
 //   const typeClass = tx.amount >= 0 ? "amount--income" : "amount--expense";
@@ -342,22 +387,17 @@ const renderTransactions = () => {
 const renderTransactionItem = (tx) => {
   const typeClass = tx.amount >= 0 ? "amount--income" : "amount--expense";
   const formattedAmount = formatCurrency(tx.amount);
-  
-  const locale = currentLang === 'en' ? 'en-US' : 'zh-CN';
-  const formattedDate = new Date(tx.date).toLocaleDateString(locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const formattedDate = formatDate(tx.date);
 
+ // Core Fix: Escapes the user-provided title to neutralize its script execution capabilities.
   const safeTitle = escapeHTML(tx.title);
-  const translatedCategory = i18nData[tx.category.toLowerCase()] || tx.category;
+
   return `
     <div class="transaction">
       <div>
         <p class="transaction__title">${safeTitle}</p> 
         <div class="transaction__meta">
-          <span class="badge">${translatedCategory}</span>
+          <span class="badge">${tx.category}</span>
           <span>${formattedDate}</span>
         </div>
       </div>
@@ -396,8 +436,7 @@ const groupByMonth = (transactions) => {
   const lookup = new Map();
 
   sorted.forEach((tx) => {
-    const locale = currentLang === 'en' ? 'en-US' : 'zh-CN';
-    const label = new Date(tx.date).toLocaleDateString(locale, {
+    const label = new Date(tx.date).toLocaleDateString("en-US", {
       month: "long",
       year: "numeric",
     });
@@ -533,31 +572,13 @@ const exportToCSV = () => {
   showToast(i18nData.csvExported || "CSV exported.");
 };
 
-// async function loadLanguage(lang) {
-//   try {
-//     const res = await fetch(`locales/${lang}.json`);
-//     i18nData = await res.json();
-//     currentLang = lang;
-//     localStorage.setItem('siteLang', lang);
-//     applyI18n();
-//   } catch (err) {
-//     console.error('语言文件加载失败', err);
-//   }
-// }
-
-// new version
 async function loadLanguage(lang) {
   try {
     const res = await fetch(`locales/${lang}.json`);
     i18nData = await res.json();
     currentLang = lang;
     localStorage.setItem('siteLang', lang);
-    
-    document.documentElement.lang = lang; 
-
     applyI18n();
-    resetFormState();
-    renderApp();
   } catch (err) {
     console.error('语言文件加载失败', err);
   }
@@ -568,13 +589,6 @@ function applyI18n() {
     const key = el.getAttribute('i18n');
     if (i18nData[key]) {
       el.innerText = i18nData[key];
-    }
-  });
-
-  document.querySelectorAll('[i18n-placeholder]').forEach(el => {
-    const key = el.getAttribute('i18n-placeholder');
-    if (i18nData[key]) {
-      el.setAttribute('placeholder', i18nData[key]);
     }
   });
 }
@@ -700,48 +714,11 @@ window.addEventListener('DOMContentLoaded', () => {
   const langSwitch = document.getElementById('langSwitch');
   if(langSwitch){
     langSwitch.value = currentLang;
-    langSwitch.addEventListener('change', e => {
-      currentLang = e.target.value; 
-      loadLanguage(currentLang);
+    langSwitch.addEventListener('change',e=>{
+      loadLanguage(e.target.value);
     });
   }
 });
 
 
 initializeApp();
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { 
-    escapeHTML, 
-    formatCurrency,
-    generateID,
-    saveToLocalStorage,
-    loadFromLocalStorage,
-    saveTheme,
-    setTheme,
-    loadTheme,
-    showToast,
-    clearErrors,
-    setError,
-    validateForm,
-    resetFormState,
-    addTransaction,
-    startEditing,
-    deleteTransaction,
-    openConfirmModal,
-    closeConfirmModal,
-    renderSummary,
-    renderTransactions,
-    renderTransactionItem,
-    filterTransactions,
-    groupByMonth,
-    formatDate,
-    renderChart,
-    renderApp,
-    exportToCSV,
-    loadLanguage,
-    applyI18n,
-    initializeApp,
-    initCookieBanner
-  };
-}
