@@ -1,14 +1,5 @@
 "use strict";
 
-const escapeHTML = (str) => {
-  if (!str) return "";
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
 
 
 let i18nData = {};
@@ -28,7 +19,7 @@ const state = {
   },
   editingId: null,
   pendingDeleteId: null,
-  theme: "dark",
+  theme: "light",
 };
 
 const dom = {
@@ -68,11 +59,6 @@ const generateID = () => {
 
 const saveToLocalStorage = () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.transactions));
-};
-
-const loadFromLocalStorage = () => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  state.transactions = stored ? JSON.parse(stored) : [];
 };
 
 const saveTheme = () => {
@@ -139,6 +125,11 @@ const validateForm = () => {
 
   if (!amountValue || Number.isNaN(amount) || amount === 0) {
     setError(dom.amountInput, dom.amountError, "Enter a valid amount.");
+    isValid = false;
+  }
+
+  if (amount < 0) {
+    setError(dom.amountInput, dom.amountError, "Amount Invalid.");
     isValid = false;
   }
 
@@ -209,7 +200,6 @@ const startEditing = (id) => {
   state.editingId = id;
   dom.submitBtn.textContent = i18nData.saveChanges || "Save Changes";
   dom.cancelEditBtn.hidden = false;
-  dom.titleInput.focus();
   showToast(i18nData.editingMode || "Editing mode enabled.");
 };
 
@@ -263,9 +253,6 @@ const closeConfirmModal = () => {
   dom.confirmModal.classList.remove("is-open");
   dom.confirmModal.setAttribute("aria-hidden", "true");
   dom.confirmModal.removeEventListener("keydown", handleModalTab);
-  if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === "function") {
-    previouslyFocusedElement.focus();
-  }
 };
 
 // Focus Trap
@@ -274,19 +261,10 @@ const handleModalTab = (e) => {
 
   const focusableElements = [dom.cancelDeleteBtn, dom.confirmDeleteBtn];
   const firstElement = focusableElements[0];
-  const lastElement = focusableElements[focusableElements.length - 1];
-
-  if (e.shiftKey) {
-    if (document.activeElement === firstElement) {
-      lastElement.focus();
-      e.preventDefault(); 
-    }
-  } 
-  else {
-    if (document.activeElement === lastElement) {
+  const lastElement = focusableElements[focusableElements.length - 1];} 
+  if (document.activeElement === lastElement) {
       firstElement.focus();
       e.preventDefault();
-    }
   }
 };
 
@@ -330,36 +308,6 @@ const renderSummary = () => {
   dom.totalBalance.textContent = formatCurrency(balanceCents / 100);
 };
 
-// const renderTransactions = () => {
-//   const filtered = filterTransactions();
-
-//   dom.resultsCount.textContent = `${filtered.length} results`;
-
-//   if (filtered.length === 0) {
-//     dom.transactionsList.innerHTML = `
-//       <div class="transactions__empty">
-//         <div class="empty__icon">+</div>
-//         <p i18n="noTransactions">No transactions yet. Add your first one to get started.</p>
-//         <button class="btn btn--accent empty-add-btn" type="button" i18n="addFirstTransaction">Add First Transaction</button>
-//       </div>
-//     `;
-//     return;
-//   }
-
-//   const groups = groupByMonth(filtered);
-
-//   dom.transactionsList.innerHTML = groups
-//     .map(
-//       (group) => `
-//         <div class="month-group">
-//           <p class="month-title">${group.label}</p>
-//           ${group.items.map(renderTransactionItem).join("")}
-//         </div>
-//       `,
-//     )
-//     .join("");
-// };
-
 const renderTransactions = () => {
   const filtered = filterTransactions();
   dom.resultsCount.textContent = currentLang === 'zh' 
@@ -392,30 +340,6 @@ const renderTransactions = () => {
     )
     .join("");
 };
-
-
-// const renderTransactionItem = (tx) => {
-//   const typeClass = tx.amount >= 0 ? "amount--income" : "amount--expense";
-//   const formattedAmount = formatCurrency(tx.amount);
-//   const formattedDate = formatDate(tx.date);
-
-//   return `
-//     <div class="transaction">
-//       <div>
-//         <p class="transaction__title">${tx.title}</p>
-//         <div class="transaction__meta">
-//           <span class="badge">${tx.category}</span>
-//           <span>${formattedDate}</span>
-//         </div>
-//       </div>
-//       <div>
-//         <p class="amount ${typeClass}">${formattedAmount}</p>
-//         <button class="edit-btn" data-id="${tx.id}">Edit</button>
-//         <button class="delete-btn" data-id="${tx.id}">Delete</button>
-//       </div>
-//     </div>
-//   `;
-// };
 
 const renderTransactionItem = (tx) => {
   const typeClass = tx.amount >= 0 ? "amount--income" : "amount--expense";
@@ -725,13 +649,12 @@ const initializeApp = () => {
     state.filters = { category: "all", type: "all", search: "" };
     dom.filterCategory.value = "all";
     dom.filterType.value = "all";
-    dom.searchInput.value = "";
+    dom.searchInput.value = "Please input...";
     renderTransactions();
     if (typeof showToast === 'function') {
       showToast(i18nData.filtersCleared || "Filters cleared.");
     }
   });
-  // ......
 
   dom.exportCsvBtn.addEventListener("click", exportToCSV);
 
@@ -821,6 +744,7 @@ if (typeof module !== 'undefined' && module.exports) {
     loadLanguage,
     applyI18n,
     initializeApp,
-    initCookieBanner
+    initCookieBanner,
+    clearErrors
   };
 }
