@@ -266,7 +266,21 @@ const handleModalTab = (e) => {
   }
 };
 
-// modify with locl
+const renderSummary = () => {
+  const toCents = (num) => Math.round(num * 100);
+  const totalIncomeCents = state.transactions
+    .filter((tx) => tx.amount > 0)
+    .reduce((sum, tx) => sum + toCents(tx.amount), 0);
+  const totalExpensesCents = state.transactions
+    .filter((tx) => tx.amount < 0)
+    .reduce((sum, tx) => sum + Math.abs(toCents(tx.amount)), 0);
+  const balanceCents = totalIncomeCents - totalExpensesCents;
+
+  dom.totalIncome.textContent = formatCurrency(totalIncomeCents / 100);
+  dom.totalExpenses.textContent = formatCurrency(totalExpensesCents / 100);
+  dom.totalBalance.textContent = formatCurrency(balanceCents / 100);
+};
+
 
 const renderTransactions = () => {
   const filtered = filterTransactions();
