@@ -44,7 +44,7 @@
   "privacySaved": "Privacy preferences saved.",
   "cookieText": "We use cookies to ensure you get the best experience on our finance tracker. By clicking Accept, you agree to our Privacy Policy.",
   "accept": "Accept",
-  "type": "类型",
+  "type": "Type",
   "selectCategory": "Select category",
   "datePlaceholder": "Select date...",
   "salary": "Salary",
@@ -58,6 +58,5 @@
   "education": "Education",
   "other": "Other",
   "cookieText": "We use cookies to ensure you get the best experience on our finance tracker. By clicking \"Accept\", you agree to our",
-  "privacyPolicyLink": "Privacy Policy",
-  "accept": "Accept"
+  "privacyPolicyLink": "Privacy Policy"
 }
